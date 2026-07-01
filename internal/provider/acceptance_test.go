@@ -27,7 +27,7 @@ provider "cloudinary" {
 `, baseURL)
 }
 
-func TestAccSubAccountResource(t *testing.T) {
+func TestAccProductEnvironmentResource(t *testing.T) {
 	mock := newMockProvisioning()
 	ts := mock.server()
 	t.Cleanup(ts.Close)
@@ -37,38 +37,38 @@ func TestAccSubAccountResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{ // Create
 				Config: providerConfig(ts.URL) + `
-resource "cloudinary_sub_account" "test" {
+resource "cloudinary_product_environment" "test" {
   name       = "acme"
-  cloud_name = "scayle-acme"
+  cloud_name = "acme-prod"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("cloudinary_sub_account.test", "name", "acme"),
-					resource.TestCheckResourceAttr("cloudinary_sub_account.test", "cloud_name", "scayle-acme"),
-					resource.TestCheckResourceAttr("cloudinary_sub_account.test", "enabled", "true"),
-					resource.TestCheckResourceAttrSet("cloudinary_sub_account.test", "id"),
-					resource.TestCheckResourceAttrSet("cloudinary_sub_account.test", "initial_access_key.key"),
-					resource.TestCheckResourceAttrSet("cloudinary_sub_account.test", "initial_access_key.secret"),
+					resource.TestCheckResourceAttr("cloudinary_product_environment.test", "name", "acme"),
+					resource.TestCheckResourceAttr("cloudinary_product_environment.test", "cloud_name", "acme-prod"),
+					resource.TestCheckResourceAttr("cloudinary_product_environment.test", "enabled", "true"),
+					resource.TestCheckResourceAttrSet("cloudinary_product_environment.test", "id"),
+					resource.TestCheckResourceAttrSet("cloudinary_product_environment.test", "initial_access_key.key"),
+					resource.TestCheckResourceAttrSet("cloudinary_product_environment.test", "initial_access_key.secret"),
 				),
 			},
 			{ // Import by cloud name (initial_access_key is unrecoverable on import)
-				ResourceName:            "cloudinary_sub_account.test",
+				ResourceName:            "cloudinary_product_environment.test",
 				ImportState:             true,
-				ImportStateId:           "scayle-acme",
+				ImportStateId:           "acme-prod",
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"initial_access_key"},
 			},
 			{ // Update
 				Config: providerConfig(ts.URL) + `
-resource "cloudinary_sub_account" "test" {
+resource "cloudinary_product_environment" "test" {
   name       = "acme-renamed"
-  cloud_name = "scayle-acme"
+  cloud_name = "acme-prod"
   enabled    = false
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("cloudinary_sub_account.test", "name", "acme-renamed"),
-					resource.TestCheckResourceAttr("cloudinary_sub_account.test", "enabled", "false"),
+					resource.TestCheckResourceAttr("cloudinary_product_environment.test", "name", "acme-renamed"),
+					resource.TestCheckResourceAttr("cloudinary_product_environment.test", "enabled", "false"),
 				),
 			},
 		},
@@ -81,13 +81,13 @@ func TestAccAccessKeyResource(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	config := providerConfig(ts.URL) + `
-resource "cloudinary_sub_account" "test" {
+resource "cloudinary_product_environment" "test" {
   name       = "acme"
-  cloud_name = "scayle-acme"
+  cloud_name = "acme-prod"
 }
 
 resource "cloudinary_access_key" "test" {
-  sub_account_id = cloudinary_sub_account.test.id
+  sub_account_id = cloudinary_product_environment.test.id
   name           = "live"
 }
 `
@@ -108,7 +108,7 @@ resource "cloudinary_access_key" "test" {
 			{ // Import by "<cloud_name>/<key_name>" (the secret cannot be recovered)
 				ResourceName:            "cloudinary_access_key.test",
 				ImportState:             true,
-				ImportStateId:           "scayle-acme/live",
+				ImportStateId:           "acme-prod/live",
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"api_secret"},
 			},
@@ -116,7 +116,7 @@ resource "cloudinary_access_key" "test" {
 	})
 }
 
-func TestAccSubAccountDataSource(t *testing.T) {
+func TestAccProductEnvironmentDataSource(t *testing.T) {
 	mock := newMockProvisioning()
 	ts := mock.server()
 	t.Cleanup(ts.Close)
@@ -126,25 +126,25 @@ func TestAccSubAccountDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(ts.URL) + `
-resource "cloudinary_sub_account" "test" {
+resource "cloudinary_product_environment" "test" {
   name       = "acme"
-  cloud_name = "scayle-acme"
+  cloud_name = "acme-prod"
 }
 
-data "cloudinary_sub_account" "test" {
-  id = cloudinary_sub_account.test.id
+data "cloudinary_product_environment" "test" {
+  id = cloudinary_product_environment.test.id
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.cloudinary_sub_account.test", "name", "acme"),
-					resource.TestCheckResourceAttr("data.cloudinary_sub_account.test", "cloud_name", "scayle-acme"),
+					resource.TestCheckResourceAttr("data.cloudinary_product_environment.test", "name", "acme"),
+					resource.TestCheckResourceAttr("data.cloudinary_product_environment.test", "cloud_name", "acme-prod"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccSubAccountDataSourceByCloudName(t *testing.T) {
+func TestAccProductEnvironmentDataSourceByCloudName(t *testing.T) {
 	mock := newMockProvisioning()
 	ts := mock.server()
 	t.Cleanup(ts.Close)
@@ -154,21 +154,21 @@ func TestAccSubAccountDataSourceByCloudName(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(ts.URL) + `
-resource "cloudinary_sub_account" "test" {
+resource "cloudinary_product_environment" "test" {
   name       = "acme"
-  cloud_name = "scayle-acme"
+  cloud_name = "acme-prod"
 }
 
-data "cloudinary_sub_account" "by_cloud_name" {
-  cloud_name = cloudinary_sub_account.test.cloud_name
+data "cloudinary_product_environment" "by_cloud_name" {
+  cloud_name = cloudinary_product_environment.test.cloud_name
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.cloudinary_sub_account.by_cloud_name", "name", "acme"),
-					resource.TestCheckResourceAttr("data.cloudinary_sub_account.by_cloud_name", "cloud_name", "scayle-acme"),
+					resource.TestCheckResourceAttr("data.cloudinary_product_environment.by_cloud_name", "name", "acme"),
+					resource.TestCheckResourceAttr("data.cloudinary_product_environment.by_cloud_name", "cloud_name", "acme-prod"),
 					resource.TestCheckResourceAttrPair(
-						"data.cloudinary_sub_account.by_cloud_name", "id",
-						"cloudinary_sub_account.test", "id",
+						"data.cloudinary_product_environment.by_cloud_name", "id",
+						"cloudinary_product_environment.test", "id",
 					),
 				),
 			},
@@ -186,18 +186,18 @@ func TestAccAccessKeyDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(ts.URL) + `
-resource "cloudinary_sub_account" "test" {
+resource "cloudinary_product_environment" "test" {
   name       = "acme"
-  cloud_name = "scayle-acme"
+  cloud_name = "acme-prod"
 }
 
 resource "cloudinary_access_key" "test" {
-  sub_account_id = cloudinary_sub_account.test.id
+  sub_account_id = cloudinary_product_environment.test.id
   name           = "live"
 }
 
 data "cloudinary_access_key" "test" {
-  sub_account_id = cloudinary_sub_account.test.id
+  sub_account_id = cloudinary_product_environment.test.id
   api_key        = cloudinary_access_key.test.api_key
 }
 `,

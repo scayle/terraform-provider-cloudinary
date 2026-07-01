@@ -47,8 +47,8 @@ func (r *accessKeyResource) Metadata(_ context.Context, req resource.MetadataReq
 
 func (r *accessKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a Cloudinary API access key within a product environment (sub-account). " +
-			"Access keys are used to generate signed upload parameters for a tenant space.",
+		MarkdownDescription: "Manages a Cloudinary API access key within a product environment. " +
+			"An access key provides API credentials scoped to that product environment.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -200,7 +200,7 @@ func (r *accessKeyResource) ImportState(ctx context.Context, req resource.Import
 	}
 
 	// The sub-account reference may be an ID or a cloud name.
-	subAccountID, err := resolveSubAccountID(ctx, r.client, subRef)
+	subAccountID, err := resolveProductEnvironmentID(ctx, r.client, subRef)
 	if err != nil {
 		resp.Diagnostics.AddError("Error importing Cloudinary access key", err.Error())
 		return

@@ -27,16 +27,16 @@ var apiAccessKeyAttrTypes = map[string]attr.Type{
 }
 
 var (
-	_ resource.Resource                = (*subAccountResource)(nil)
-	_ resource.ResourceWithConfigure   = (*subAccountResource)(nil)
-	_ resource.ResourceWithImportState = (*subAccountResource)(nil)
+	_ resource.Resource                = (*productEnvironmentResource)(nil)
+	_ resource.ResourceWithConfigure   = (*productEnvironmentResource)(nil)
+	_ resource.ResourceWithImportState = (*productEnvironmentResource)(nil)
 )
 
-type subAccountResource struct {
+type productEnvironmentResource struct {
 	client *cldprovisioning.CldProvisioning
 }
 
-type subAccountResourceModel struct {
+type productEnvironmentResourceModel struct {
 	ID               types.String `tfsdk:"id"`
 	Name             types.String `tfsdk:"name"`
 	CloudName        types.String `tfsdk:"cloud_name"`
@@ -46,17 +46,17 @@ type subAccountResourceModel struct {
 	InitialAccessKey types.Object `tfsdk:"initial_access_key"`
 }
 
-func NewSubAccountResource() resource.Resource {
-	return &subAccountResource{}
+func NewProductEnvironmentResource() resource.Resource {
+	return &productEnvironmentResource{}
 }
 
-func (r *subAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_sub_account"
+func (r *productEnvironmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_product_environment"
 }
 
-func (r *subAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *productEnvironmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a Cloudinary product environment (sub-account). One sub-account is created per tenant.",
+		MarkdownDescription: "Manages a Cloudinary product environment (previously known as a sub-account).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -117,12 +117,12 @@ func (r *subAccountResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 }
 
-func (r *subAccountResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *productEnvironmentResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = configureClient(req.ProviderData, &resp.Diagnostics)
 }
 
-func (r *subAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan subAccountResourceModel
+func (r *productEnvironmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan productEnvironmentResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -163,8 +163,8 @@ func (r *subAccountResource) Create(ctx context.Context, req resource.CreateRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *subAccountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state subAccountResourceModel
+func (r *productEnvironmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state productEnvironmentResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -188,8 +188,8 @@ func (r *subAccountResource) Read(ctx context.Context, req resource.ReadRequest,
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *subAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state subAccountResourceModel
+func (r *productEnvironmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state productEnvironmentResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -221,8 +221,8 @@ func (r *subAccountResource) Update(ctx context.Context, req resource.UpdateRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *subAccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state subAccountResourceModel
+func (r *productEnvironmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state productEnvironmentResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -236,10 +236,10 @@ func (r *subAccountResource) Delete(ctx context.Context, req resource.DeleteRequ
 	}
 }
 
-func (r *subAccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *productEnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// The import ID may be a sub-account ID or a cloud name; resolve to the ID
 	// so the subsequent Read (which looks up by ID) succeeds.
-	id, err := resolveSubAccountID(ctx, r.client, req.ID)
+	id, err := resolveProductEnvironmentID(ctx, r.client, req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error importing Cloudinary sub-account", err.Error())
 		return
@@ -256,7 +256,7 @@ func (r *subAccountResource) ImportState(ctx context.Context, req resource.Impor
 //     already stored in prior state (the read API returns every key but omits
 //     secrets, so the stored secret is retained).
 //   - After an import there is no stored key to match, so it stays null.
-func (r *subAccountResource) mapEnvToModel(_ context.Context, env *components.ProductEnvironment, model *subAccountResourceModel, prior *subAccountResourceModel) diag.Diagnostics {
+func (r *productEnvironmentResource) mapEnvToModel(_ context.Context, env *components.ProductEnvironment, model *productEnvironmentResourceModel, prior *productEnvironmentResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	model.ID = types.StringValue(deref(env.ID))

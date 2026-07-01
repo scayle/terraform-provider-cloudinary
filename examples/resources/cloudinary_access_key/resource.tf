@@ -1,16 +1,15 @@
-# Step 2: an access key per tenant space (environment) within a sub-account.
-resource "cloudinary_access_key" "tenant_space" {
-  sub_account_id = cloudinary_sub_account.tenant.id
-  name           = "live"
+resource "cloudinary_access_key" "example" {
+  sub_account_id = cloudinary_product_environment.example.id
+  name           = "primary"
   enabled        = true
 }
 
-output "tenant_space_api_key" {
-  value     = cloudinary_access_key.tenant_space.api_key
+output "api_key" {
+  value     = cloudinary_access_key.example.api_key
   sensitive = true
 }
 
-output "tenant_space_api_secret" {
-  value     = cloudinary_access_key.tenant_space.api_secret
+output "api_secret" {
+  value     = cloudinary_access_key.example.api_secret
   sensitive = true
 }

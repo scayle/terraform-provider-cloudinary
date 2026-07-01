@@ -29,16 +29,16 @@ func TestIntegrationSDKAgainstMock(t *testing.T) {
 	})
 	ctx := context.Background()
 
-	// --- Sub-account create (step 1) ---
+	// --- Product environment create ---
 	env, err := client.ProductEnvironments.Create(ctx, components.ProductEnvironmentRequest{
 		Name:      "acme",
-		CloudName: cldprovisioning.String("scayle-acme"),
+		CloudName: cldprovisioning.String("acme-prod"),
 	})
 	if err != nil {
 		t.Fatalf("create env: %s", err)
 	}
-	if deref(env.CloudName) != "scayle-acme" {
-		t.Errorf("cloud_name = %q, want scayle-acme", deref(env.CloudName))
+	if deref(env.CloudName) != "acme-prod" {
+		t.Errorf("cloud_name = %q, want acme-prod", deref(env.CloudName))
 	}
 	if len(env.APIAccessKeys) != 1 || deref(env.APIAccessKeys[0].Secret) == "" {
 		t.Fatalf("expected one api access key with a secret at creation, got %+v", env.APIAccessKeys)
@@ -73,7 +73,7 @@ func TestIntegrationSDKAgainstMock(t *testing.T) {
 		t.Errorf("update not applied: %+v", updated)
 	}
 
-	// --- Access key generate (step 2) ---
+	// --- Access key generate ---
 	key, err := client.AccessKeys.Generate(ctx, operations.GenerateAccessKeyRequest{
 		SubAccountID:     envID,
 		AccessKeyRequest: components.AccessKeyRequest{Name: cldprovisioning.String("live")},

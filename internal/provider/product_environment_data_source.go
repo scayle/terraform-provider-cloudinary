@@ -13,15 +13,15 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = (*subAccountDataSource)(nil)
-	_ datasource.DataSourceWithConfigure = (*subAccountDataSource)(nil)
+	_ datasource.DataSource              = (*productEnvironmentDataSource)(nil)
+	_ datasource.DataSourceWithConfigure = (*productEnvironmentDataSource)(nil)
 )
 
-type subAccountDataSource struct {
+type productEnvironmentDataSource struct {
 	client *cldprovisioning.CldProvisioning
 }
 
-type subAccountDataSourceModel struct {
+type productEnvironmentDataSourceModel struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
 	CloudName     types.String `tfsdk:"cloud_name"`
@@ -30,15 +30,15 @@ type subAccountDataSourceModel struct {
 	APIAccessKeys types.List   `tfsdk:"api_access_keys"`
 }
 
-func NewSubAccountDataSource() datasource.DataSource {
-	return &subAccountDataSource{}
+func NewProductEnvironmentDataSource() datasource.DataSource {
+	return &productEnvironmentDataSource{}
 }
 
-func (d *subAccountDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_sub_account"
+func (d *productEnvironmentDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_product_environment"
 }
 
-func (d *subAccountDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *productEnvironmentDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Fetches a Cloudinary product environment (sub-account) by its `id` or by its `cloud_name`. " +
 			"Exactly one of the two must be set.",
@@ -91,12 +91,12 @@ func (d *subAccountDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	}
 }
 
-func (d *subAccountDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *productEnvironmentDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	d.client = configureClient(req.ProviderData, &resp.Diagnostics)
 }
 
-func (d *subAccountDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config subAccountDataSourceModel
+func (d *productEnvironmentDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var config productEnvironmentDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -121,7 +121,7 @@ func (d *subAccountDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			env, err = nil, nil
 		}
 	} else {
-		env, err = getSubAccountByCloudName(ctx, d.client, config.CloudName.ValueString())
+		env, err = getProductEnvironmentByCloudName(ctx, d.client, config.CloudName.ValueString())
 	}
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Cloudinary sub-account", err.Error())

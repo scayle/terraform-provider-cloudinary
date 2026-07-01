@@ -28,14 +28,14 @@ func TestProviderSchema(t *testing.T) {
 		}
 	}
 
-	wantResources := []string{"cloudinary_sub_account", "cloudinary_access_key"}
+	wantResources := []string{"cloudinary_product_environment", "cloudinary_access_key"}
 	for _, name := range wantResources {
 		if _, ok := resp.ResourceSchemas[name]; !ok {
 			t.Errorf("missing resource schema %q", name)
 		}
 	}
 
-	wantDataSources := []string{"cloudinary_sub_account", "cloudinary_access_key"}
+	wantDataSources := []string{"cloudinary_product_environment", "cloudinary_access_key"}
 	for _, name := range wantDataSources {
 		if _, ok := resp.DataSourceSchemas[name]; !ok {
 			t.Errorf("missing data source schema %q", name)

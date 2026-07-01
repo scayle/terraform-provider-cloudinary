@@ -3,30 +3,29 @@
 page_title: "cloudinary_access_key Resource - cloudinary"
 subcategory: ""
 description: |-
-  Manages a Cloudinary API access key within a product environment (sub-account). Access keys are used to generate signed upload parameters for a tenant space.
+  Manages a Cloudinary API access key within a product environment. An access key provides API credentials scoped to that product environment.
 ---
 
 # cloudinary_access_key (Resource)
 
-Manages a Cloudinary API access key within a product environment (sub-account). Access keys are used to generate signed upload parameters for a tenant space.
+Manages a Cloudinary API access key within a product environment. An access key provides API credentials scoped to that product environment.
 
 ## Example Usage
 
 ```terraform
-# Step 2: an access key per tenant space (environment) within a sub-account.
-resource "cloudinary_access_key" "tenant_space" {
-  sub_account_id = cloudinary_sub_account.tenant.id
-  name           = "live"
+resource "cloudinary_access_key" "example" {
+  sub_account_id = cloudinary_product_environment.example.id
+  name           = "primary"
   enabled        = true
 }
 
-output "tenant_space_api_key" {
-  value     = cloudinary_access_key.tenant_space.api_key
+output "api_key" {
+  value     = cloudinary_access_key.example.api_key
   sensitive = true
 }
 
-output "tenant_space_api_secret" {
-  value     = cloudinary_access_key.tenant_space.api_secret
+output "api_secret" {
+  value     = cloudinary_access_key.example.api_secret
   sensitive = true
 }
 ```
@@ -58,10 +57,10 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Access keys can be imported as "<sub_account_id>/<api_key>"...
-terraform import cloudinary_access_key.tenant_space 555asdf0000zxcvb3456qwerty/814814814814814
+terraform import cloudinary_access_key.example 555asdf0000zxcvb3456qwerty/814814814814814
 
-# ...or by their human names as "<cloud_name>/<key_name>".
-terraform import cloudinary_access_key.tenant_space scayle-acme/live
+# ...or by their names as "<cloud_name>/<key_name>".
+terraform import cloudinary_access_key.example acme-prod/primary
 
 # Note: the API secret is only returned at creation time and cannot be recovered
 # on import; it will be null in state afterwards.

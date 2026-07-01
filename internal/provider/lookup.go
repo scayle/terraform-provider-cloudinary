@@ -9,9 +9,9 @@ import (
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning/models/operations"
 )
 
-// getSubAccountByCloudName returns the product environment whose cloud name
+// getProductEnvironmentByCloudName returns the product environment whose cloud name
 // matches, or (nil, nil) if none exists.
-func getSubAccountByCloudName(ctx context.Context, client *cldprovisioning.CldProvisioning, cloudName string) (*components.ProductEnvironment, error) {
+func getProductEnvironmentByCloudName(ctx context.Context, client *cldprovisioning.CldProvisioning, cloudName string) (*components.ProductEnvironment, error) {
 	res, err := client.ProductEnvironments.List(ctx, &operations.GetProductEnvironmentsRequest{
 		CloudNames: []string{cloudName},
 	})
@@ -26,9 +26,9 @@ func getSubAccountByCloudName(ctx context.Context, client *cldprovisioning.CldPr
 	return nil, nil
 }
 
-// resolveSubAccountID resolves a reference that may be either a sub-account ID
+// resolveProductEnvironmentID resolves a reference that may be either a sub-account ID
 // or a cloud name into the sub-account ID.
-func resolveSubAccountID(ctx context.Context, client *cldprovisioning.CldProvisioning, ref string) (string, error) {
+func resolveProductEnvironmentID(ctx context.Context, client *cldprovisioning.CldProvisioning, ref string) (string, error) {
 	// Try the reference as an ID first. Any failure (the API returns varying
 	// statuses/messages for an unknown or malformed ID) simply means we fall
 	// back to treating the reference as a cloud name.
@@ -36,7 +36,7 @@ func resolveSubAccountID(ctx context.Context, client *cldprovisioning.CldProvisi
 		return deref(env.ID), nil
 	}
 
-	env, err := getSubAccountByCloudName(ctx, client, ref)
+	env, err := getProductEnvironmentByCloudName(ctx, client, ref)
 	if err != nil {
 		return "", err
 	}

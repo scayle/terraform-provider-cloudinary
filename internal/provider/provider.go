@@ -143,14 +143,14 @@ func (p *cloudinaryProvider) Configure(ctx context.Context, req provider.Configu
 
 func (p *cloudinaryProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewSubAccountResource,
+		NewProductEnvironmentResource,
 		NewAccessKeyResource,
 	}
 }
 
 func (p *cloudinaryProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewSubAccountDataSource,
+		NewProductEnvironmentDataSource,
 		NewAccessKeyDataSource,
 	}
 }
