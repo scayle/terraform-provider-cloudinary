@@ -7,6 +7,7 @@ import (
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning"
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning/models/components"
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning/models/operations"
+	"github.com/cloudinary/cloudinary-go/v2/api/admin"
 )
 
 // getProductEnvironmentByCloudName returns the product environment whose cloud name
@@ -61,6 +62,27 @@ func resolveAccessKey(ctx context.Context, client *cldprovisioning.CldProvisioni
 	for i := range res.AccessKeys {
 		if deref(res.AccessKeys[i].Name) == keyRef {
 			return &res.AccessKeys[i], nil
+		}
+	}
+	return nil, nil
+}
+
+func lookupTrigger(ctx context.Context, client *admin.API, triggerID, uri string) (*admin.Trigger, error) {
+	res, err := client.ListTriggers(ctx, admin.ListTriggersParams{})
+	if err == nil && res != nil {
+		err = adminError(res.Error)
+	}
+	if err != nil {
+		return nil, err
+	}
+	for i := range res.Triggers {
+		if triggerID != "" && res.Triggers[i].ID == triggerID {
+			return &res.Triggers[i], nil
+		}
+	}
+	for i := range res.Triggers {
+		if triggerID == "" && uri != "" && res.Triggers[i].URI == uri {
+			return &res.Triggers[i], nil
 		}
 	}
 	return nil, nil
