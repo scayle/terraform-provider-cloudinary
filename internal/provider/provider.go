@@ -19,6 +19,11 @@ const (
 	envAPISecret = "CLOUDINARY_PROVISIONING_API_SECRET"
 	envRegion    = "CLOUDINARY_API_REGION"
 	envBaseURL   = "CLOUDINARY_API_BASE_URL"
+
+	envCloudName      = "CLOUDINARY_CLOUD_NAME"
+	envAdminAPIKey    = "CLOUDINARY_API_KEY"
+	envAdminAPISecret = "CLOUDINARY_API_SECRET"
+	envAdminBaseURL   = "CLOUDINARY_ADMIN_API_BASE_URL"
 )
 
 // Ensure cloudinaryProvider satisfies the provider.Provider interface.
@@ -38,6 +43,10 @@ type cloudinaryProviderModel struct {
 	ProvisioningAPISecret types.String `tfsdk:"provisioning_api_secret"`
 	APIRegion             types.String `tfsdk:"api_region"`
 	APIBaseURL            types.String `tfsdk:"api_base_url"`
+	CloudName             types.String `tfsdk:"cloud_name"`
+	APIKey                types.String `tfsdk:"api_key"`
+	APISecret             types.String `tfsdk:"api_secret"`
+	AdminAPIBaseURL       types.String `tfsdk:"admin_api_base_url"`
 }
 
 // New returns a function that instantiates the provider with the given version.
@@ -55,8 +64,11 @@ func (p *cloudinaryProvider) Metadata(_ context.Context, _ provider.MetadataRequ
 func (p *cloudinaryProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "The Cloudinary provider manages Cloudinary product environments (sub-accounts) and " +
-			"their API access keys through the [Cloudinary Provisioning API](https://cloudinary.com/documentation/provisioning_api). " +
-			"Credentials are the account-level *provisioning* (account management) key and secret.",
+			"their API access keys through the [Cloudinary Provisioning API](https://cloudinary.com/documentation/provisioning_api), " +
+			"and upload presets and triggers through the [Admin API](https://cloudinary.com/documentation/admin_api). " +
+			"The Provisioning API uses the account-level *provisioning* (account management) key and secret; the Admin API " +
+			"authenticates per product environment, so `cloudinary_upload_preset` and `cloudinary_trigger` take their own " +
+			"`cloud_name`, `api_key` and `api_secret`, falling back to the ones configured here.",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				Optional: true,
@@ -84,6 +96,28 @@ func (p *cloudinaryProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 				Optional: true,
 				MarkdownDescription: "Override the full Provisioning API base URL (e.g. for a proxy or testing). " +
 					"Takes precedence over `api_region`. May also be set with the `" + envBaseURL + "` environment variable.",
+			},
+			"cloud_name": schema.StringAttribute{
+				Optional: true,
+				MarkdownDescription: "Default cloud name for Admin API resources. May also be set with the `" +
+					envCloudName + "` environment variable.",
+			},
+			"api_key": schema.StringAttribute{
+				Optional:  true,
+				Sensitive: true,
+				MarkdownDescription: "Default product environment API key for Admin API resources. May also be set " +
+					"with the `" + envAdminAPIKey + "` environment variable.",
+			},
+			"api_secret": schema.StringAttribute{
+				Optional:  true,
+				Sensitive: true,
+				MarkdownDescription: "Default product environment API secret for Admin API resources. May also be set " +
+					"with the `" + envAdminAPISecret + "` environment variable.",
+			},
+			"admin_api_base_url": schema.StringAttribute{
+				Optional: true,
+				MarkdownDescription: "Override the Admin API base URL (e.g. for a proxy or testing). May also be set " +
+					"with the `" + envAdminBaseURL + "` environment variable.",
 			},
 		},
 	}
@@ -128,23 +162,33 @@ func (p *cloudinaryProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	client := newClient(clientConfig{
-		AccountID: accountID,
-		APIKey:    apiKey,
-		APISecret: apiSecret,
-		Region:    region,
-		BaseURL:   baseURL,
-	})
+	clients := &providerClients{
+		Provisioning: newClient(clientConfig{
+			AccountID: accountID,
+			APIKey:    apiKey,
+			APISecret: apiSecret,
+			Region:    region,
+			BaseURL:   baseURL,
+		}),
+		Admin: adminConfig{
+			CloudName: firstNonEmpty(config.CloudName, os.Getenv(envCloudName)),
+			APIKey:    firstNonEmpty(config.APIKey, os.Getenv(envAdminAPIKey)),
+			APISecret: firstNonEmpty(config.APISecret, os.Getenv(envAdminAPISecret)),
+			BaseURL:   firstNonEmpty(config.AdminAPIBaseURL, os.Getenv(envAdminBaseURL)),
+		},
+	}
 
-	// Make the client available to resources and data sources.
-	resp.ResourceData = client
-	resp.DataSourceData = client
+	// Make the clients available to resources and data sources.
+	resp.ResourceData = clients
+	resp.DataSourceData = clients
 }
 
 func (p *cloudinaryProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewProductEnvironmentResource,
 		NewAccessKeyResource,
+		NewUploadPresetResource,
+		NewTriggerResource,
 	}
 }
 
@@ -152,6 +196,8 @@ func (p *cloudinaryProvider) DataSources(_ context.Context) []func() datasource.
 	return []func() datasource.DataSource{
 		NewProductEnvironmentDataSource,
 		NewAccessKeyDataSource,
+		NewUploadPresetDataSource,
+		NewTriggerDataSource,
 	}
 }
 
