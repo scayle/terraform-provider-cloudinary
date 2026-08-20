@@ -15,7 +15,7 @@ var (
 )
 
 type triggerDataSource struct {
-	defaults adminConfig
+	resolver *adminResolver
 }
 
 func NewTriggerDataSource() datasource.DataSource {
@@ -75,7 +75,7 @@ func (d *triggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		},
 	}
 
-	for name, attr := range adminCredentialDataSourceAttributes() {
+	for name, attr := range adminReferenceDataSourceAttributes() {
 		attrs[name] = attr
 	}
 
@@ -90,24 +90,23 @@ func (d *triggerDataSource) Configure(_ context.Context, req datasource.Configur
 	if clients == nil {
 		return
 	}
-	d.defaults = clients.Admin
+	d.resolver = clients.Admin
 }
 
 type triggerDataSourceModel struct {
-	ID              types.String `tfsdk:"id"`
-	CloudName       types.String `tfsdk:"cloud_name"`
-	APIKey          types.String `tfsdk:"api_key"`
-	APISecret       types.String `tfsdk:"api_secret"`
-	TriggerID       types.String `tfsdk:"trigger_id"`
-	URI             types.String `tfsdk:"uri"`
-	EventType       types.String `tfsdk:"event_type"`
-	Additive        types.Bool   `tfsdk:"additive"`
-	Filter          types.String `tfsdk:"filter"`
-	FilterLanguage  types.String `tfsdk:"filter_language"`
-	PayloadTemplate types.String `tfsdk:"payload_template"`
-	URIType         types.String `tfsdk:"uri_type"`
-	CreatedAt       types.String `tfsdk:"created_at"`
-	UpdatedAt       types.String `tfsdk:"updated_at"`
+	ID                 types.String `tfsdk:"id"`
+	ProductEnvironment types.String `tfsdk:"product_environment"`
+	AccessKey          types.String `tfsdk:"access_key"`
+	TriggerID          types.String `tfsdk:"trigger_id"`
+	URI                types.String `tfsdk:"uri"`
+	EventType          types.String `tfsdk:"event_type"`
+	Additive           types.Bool   `tfsdk:"additive"`
+	Filter             types.String `tfsdk:"filter"`
+	FilterLanguage     types.String `tfsdk:"filter_language"`
+	PayloadTemplate    types.String `tfsdk:"payload_template"`
+	URIType            types.String `tfsdk:"uri_type"`
+	CreatedAt          types.String `tfsdk:"created_at"`
+	UpdatedAt          types.String `tfsdk:"updated_at"`
 }
 
 func (d *triggerDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -125,7 +124,7 @@ func (d *triggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	client, creds := resolveAdminAPI(d.defaults, config.CloudName, config.APIKey, config.APISecret, &resp.Diagnostics)
+	client, creds := d.resolver.clientFor(ctx, config.ProductEnvironment.ValueString(), config.AccessKey.ValueString(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

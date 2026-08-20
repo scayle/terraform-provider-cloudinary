@@ -78,9 +78,9 @@ The provider accepts configuration via attributes or environment variables (attr
 | `provisioning_api_secret` | `CLOUDINARY_PROVISIONING_API_SECRET` | Provisioning API secret (sensitive).         |
 | `api_region`              | `CLOUDINARY_API_REGION`              | `api` (default), `api-eu`, or `api-ap`.      |
 | `api_base_url`            | `CLOUDINARY_API_BASE_URL`            | Override the full API base URL (proxy/test). |
-| `cloud_name`              | `CLOUDINARY_CLOUD_NAME`              | Default cloud name for Admin API resources.  |
-| `api_key`                 | `CLOUDINARY_API_KEY`                 | Default product environment key (sensitive). |
-| `api_secret`              | `CLOUDINARY_API_SECRET`              | Default product environment secret (sensitive). |
+| `cloud_name`              | `CLOUDINARY_CLOUD_NAME`              | Admin API escape hatch: cloud name.          |
+| `api_key`                 | `CLOUDINARY_API_KEY`                 | Admin API escape hatch: key (sensitive).     |
+| `api_secret`              | `CLOUDINARY_API_SECRET`              | Admin API escape hatch: secret (sensitive).  |
 | `admin_api_base_url`      | `CLOUDINARY_ADMIN_API_BASE_URL`      | Override the Admin API base URL (proxy/test). |
 
 Supplying credentials through environment variables keeps them out of your configuration and
@@ -89,24 +89,46 @@ state inputs entirely.
 ### Admin API credentials
 
 The Provisioning API authenticates once at account level, but the Admin API authenticates **per
-product environment**. `cloudinary_upload_preset` and `cloudinary_trigger` therefore take their own
-`cloud_name`, `api_key` and `api_secret`, falling back to the provider-level defaults above.
-
-They are attributes on the resource rather than a second, aliased provider block on purpose: a
-provider configured from `cloudinary_access_key.example.api_secret` would be unknown at plan time
-on a first apply, which Terraform rejects. Keeping them on the resource allows a product
-environment, its access key and its presets to be created in a single apply:
+product environment**. Rather than asking you to supply those credentials, `cloudinary_upload_preset`
+and `cloudinary_trigger` reference a `product_environment` by ID or cloud name, and the provider
+resolves its credentials through the Provisioning API. No secret appears in your configuration,
+plan, or their state:
 
 ```hcl
-resource "cloudinary_upload_preset" "example" {
-  cloud_name = cloudinary_product_environment.example.cloud_name
-  api_key    = cloudinary_access_key.example.api_key
-  api_secret = cloudinary_access_key.example.api_secret
+resource "cloudinary_product_environment" "example" {
+  name       = "acme-prod"
+  cloud_name = "acme-prod"
+}
 
-  name         = "acme-videos"
-  asset_folder = "acme-videos"
+resource "cloudinary_upload_preset" "uploads" {
+  product_environment = cloudinary_product_environment.example.id # unknown at plan time, which is fine
+  name                = "acme-videos"
+  asset_folder        = "acme-videos"
 }
 ```
+
+Resource arguments may be unknown at plan time — only *provider* configuration must resolve then —
+so this creates the environment, resolves its credentials and creates the preset in a single apply.
+
+By default the oldest enabled access key of the environment is used. Set `access_key` to a key name
+to pin it, which keeps key rotation from touching every preset:
+
+```hcl
+resource "cloudinary_access_key" "terraform" {
+  sub_account_id = cloudinary_product_environment.example.id
+  name           = "terraform"
+}
+
+resource "cloudinary_upload_preset" "uploads" {
+  product_environment = cloudinary_product_environment.example.id
+  access_key          = cloudinary_access_key.terraform.name # a name, not a secret
+  name                = "acme-videos"
+}
+```
+
+Resolved credentials are cached in memory for the lifetime of the process, never in state. The
+provider-level `cloud_name` / `api_key` / `api_secret` remain available as an escape hatch for users
+who hold product environment credentials but no provisioning credentials.
 
 ## Importing
 
@@ -117,16 +139,16 @@ terraform import cloudinary_product_environment.example <id_or_cloud_name>
 # Access key: "<sub_account_id>/<api_key>" or "<cloud_name>/<key_name>"
 terraform import cloudinary_access_key.example <sub_account_id>/<api_key>
 
-# Upload preset: "<cloud_name>/<name>"
-terraform import cloudinary_upload_preset.example <cloud_name>/<name>
+# Upload preset: "<product_environment>/<name>"
+terraform import cloudinary_upload_preset.example <cloud_name_or_id>/<name>
 
-# Trigger: "<cloud_name>/<trigger_id>"
-terraform import cloudinary_trigger.example <cloud_name>/<trigger_id>
+# Trigger: "<product_environment>/<trigger_id>"
+terraform import cloudinary_trigger.example <cloud_name_or_id>/<trigger_id>
 ```
 
-> **Note on secrets:** the Cloudinary Provisioning API only returns an `api_secret` (and a product
-> environment's `initial_access_key.secret`) at creation time. These values cannot be recovered on
-> import or refresh; after an import they will be `null` in state.
+> **Note on secrets:** a product environment's `initial_access_key.secret` is only returned when the
+> environment is created, so it is `null` after an import. Access key secrets, by contrast, are
+> returned by the list endpoint and survive import and refresh.
 
 ## Development
 

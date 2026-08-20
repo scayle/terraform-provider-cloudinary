@@ -24,7 +24,7 @@ var (
 )
 
 type uploadPresetResource struct {
-	defaults adminConfig
+	resolver *adminResolver
 }
 
 func NewUploadPresetResource() resource.Resource {
@@ -63,7 +63,7 @@ func (r *uploadPresetResource) Schema(_ context.Context, _ resource.SchemaReques
 		},
 	}
 
-	for name, attr := range adminCredentialAttributes() {
+	for name, attr := range adminReferenceAttributes() {
 		attrs[name] = attr
 	}
 	for name, attr := range uploadPresetSchemaAttributes() {
@@ -83,7 +83,7 @@ func (r *uploadPresetResource) Configure(_ context.Context, req resource.Configu
 	if clients == nil {
 		return
 	}
-	r.defaults = clients.Admin
+	r.resolver = clients.Admin
 }
 
 func (r *uploadPresetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -223,32 +223,28 @@ func (r *uploadPresetResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *uploadPresetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	cloudName, name, ok := strings.Cut(req.ID, "/")
-	if !ok || cloudName == "" || name == "" {
+	environment, name, ok := strings.Cut(req.ID, "/")
+	if !ok || environment == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
-			fmt.Sprintf("Expected import identifier in the form \"<cloud_name>/<name>\", got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier in the form \"<product_environment>/<name>\", got: %q", req.ID),
 		)
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cloud_name"), cloudName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("product_environment"), environment)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), uploadPresetID(cloudName, name))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), uploadPresetID(environment, name))...)
 }
 
 // clientFor resolves the Admin API credentials from the given plan or state,
 // falling back to the provider-level defaults.
 func (r *uploadPresetResource) clientFor(ctx context.Context, src attributeGetter, diags *diag.Diagnostics) (*admin.API, adminConfig) {
-	var cloudName, apiKey, apiSecret types.String
-	diags.Append(src.GetAttribute(ctx, path.Root("cloud_name"), &cloudName)...)
-	diags.Append(src.GetAttribute(ctx, path.Root("api_key"), &apiKey)...)
-	diags.Append(src.GetAttribute(ctx, path.Root("api_secret"), &apiSecret)...)
+	environment, accessKey := adminReference(ctx, src, diags)
 	if diags.HasError() {
 		return nil, adminConfig{}
 	}
-
-	return resolveAdminAPI(r.defaults, cloudName, apiKey, apiSecret, diags)
+	return r.resolver.clientFor(ctx, environment, accessKey, diags)
 }
 
 func uploadPresetID(cloudName, name string) string {

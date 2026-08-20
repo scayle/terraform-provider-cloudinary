@@ -24,25 +24,24 @@ var (
 )
 
 type triggerResource struct {
-	defaults adminConfig
+	resolver *adminResolver
 }
 
 type triggerResourceModel struct {
-	ID              types.String `tfsdk:"id"`
-	CloudName       types.String `tfsdk:"cloud_name"`
-	APIKey          types.String `tfsdk:"api_key"`
-	APISecret       types.String `tfsdk:"api_secret"`
-	TriggerID       types.String `tfsdk:"trigger_id"`
-	URI             types.String `tfsdk:"uri"`
-	EventType       types.String `tfsdk:"event_type"`
-	Additive        types.Bool   `tfsdk:"additive"`
-	Filter          types.String `tfsdk:"filter"`
-	FilterLanguage  types.String `tfsdk:"filter_language"`
-	PayloadTemplate types.String `tfsdk:"payload_template"`
-	AuthScheme      types.String `tfsdk:"auth_scheme"`
-	URIType         types.String `tfsdk:"uri_type"`
-	CreatedAt       types.String `tfsdk:"created_at"`
-	UpdatedAt       types.String `tfsdk:"updated_at"`
+	ID                 types.String `tfsdk:"id"`
+	ProductEnvironment types.String `tfsdk:"product_environment"`
+	AccessKey          types.String `tfsdk:"access_key"`
+	TriggerID          types.String `tfsdk:"trigger_id"`
+	URI                types.String `tfsdk:"uri"`
+	EventType          types.String `tfsdk:"event_type"`
+	Additive           types.Bool   `tfsdk:"additive"`
+	Filter             types.String `tfsdk:"filter"`
+	FilterLanguage     types.String `tfsdk:"filter_language"`
+	PayloadTemplate    types.String `tfsdk:"payload_template"`
+	AuthScheme         types.String `tfsdk:"auth_scheme"`
+	URIType            types.String `tfsdk:"uri_type"`
+	CreatedAt          types.String `tfsdk:"created_at"`
+	UpdatedAt          types.String `tfsdk:"updated_at"`
 }
 
 func NewTriggerResource() resource.Resource {
@@ -112,7 +111,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		},
 	}
 
-	for name, attr := range adminCredentialAttributes() {
+	for name, attr := range adminReferenceAttributes() {
 		attrs[name] = attr
 	}
 
@@ -129,7 +128,7 @@ func (r *triggerResource) Configure(_ context.Context, req resource.ConfigureReq
 	if clients == nil {
 		return
 	}
-	r.defaults = clients.Admin
+	r.resolver = clients.Admin
 }
 
 func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -139,7 +138,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	client, creds := r.clientFor(plan, &resp.Diagnostics)
+	client, creds := r.clientFor(ctx, plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -177,7 +176,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	client, creds := r.clientFor(state, &resp.Diagnostics)
+	client, creds := r.clientFor(ctx, state, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -208,7 +207,7 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	client, creds := r.clientFor(plan, &resp.Diagnostics)
+	client, creds := r.clientFor(ctx, plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -250,7 +249,7 @@ func (r *triggerResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	client, _ := r.clientFor(state, &resp.Diagnostics)
+	client, _ := r.clientFor(ctx, state, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -265,22 +264,22 @@ func (r *triggerResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *triggerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	cloudName, triggerID, ok := strings.Cut(req.ID, "/")
-	if !ok || cloudName == "" || triggerID == "" {
+	environment, triggerID, ok := strings.Cut(req.ID, "/")
+	if !ok || environment == "" || triggerID == "" {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
-			fmt.Sprintf("Expected import identifier in the form \"<cloud_name>/<trigger_id>\", got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier in the form \"<product_environment>/<trigger_id>\", got: %q", req.ID),
 		)
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cloud_name"), cloudName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("product_environment"), environment)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("trigger_id"), triggerID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), cloudName+"/"+triggerID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), environment+"/"+triggerID)...)
 }
 
-func (r *triggerResource) clientFor(model triggerResourceModel, diags *diag.Diagnostics) (*admin.API, adminConfig) {
-	return resolveAdminAPI(r.defaults, model.CloudName, model.APIKey, model.APISecret, diags)
+func (r *triggerResource) clientFor(ctx context.Context, model triggerResourceModel, diags *diag.Diagnostics) (*admin.API, adminConfig) {
+	return r.resolver.clientFor(ctx, model.ProductEnvironment.ValueString(), model.AccessKey.ValueString(), diags)
 }
 
 func mapTriggerToModel(trigger *admin.Trigger, model *triggerResourceModel, cloudName string) {

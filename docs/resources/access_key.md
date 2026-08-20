@@ -45,7 +45,7 @@ output "api_secret" {
 ### Read-Only
 
 - `api_key` (String) The generated API key.
-- `api_secret` (String, Sensitive) The generated API secret. Only returned at creation time; unavailable after import.
+- `api_secret` (String, Sensitive) The generated API secret.
 - `created_at` (String) The RFC 3339 timestamp when the access key was created.
 - `id` (String) Composite identifier in the form `<sub_account_id>/<api_key>`.
 

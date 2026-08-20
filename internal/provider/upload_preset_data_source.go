@@ -16,7 +16,7 @@ var (
 )
 
 type uploadPresetDataSource struct {
-	defaults adminConfig
+	resolver *adminResolver
 }
 
 func NewUploadPresetDataSource() datasource.DataSource {
@@ -51,7 +51,7 @@ func (d *uploadPresetDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		},
 	}
 
-	for name, attr := range adminCredentialDataSourceAttributes() {
+	for name, attr := range adminReferenceDataSourceAttributes() {
 		attrs[name] = attr
 	}
 	for name, attr := range uploadPresetDataSourceAttributes() {
@@ -69,20 +69,18 @@ func (d *uploadPresetDataSource) Configure(_ context.Context, req datasource.Con
 	if clients == nil {
 		return
 	}
-	d.defaults = clients.Admin
+	d.resolver = clients.Admin
 }
 
 func (d *uploadPresetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var cloudName, apiKey, apiSecret, name types.String
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("cloud_name"), &cloudName)...)
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("api_key"), &apiKey)...)
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("api_secret"), &apiSecret)...)
+	var name types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("name"), &name)...)
+	environment, accessKey := adminReference(ctx, req.Config, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client, creds := resolveAdminAPI(d.defaults, cloudName, apiKey, apiSecret, &resp.Diagnostics)
+	client, creds := d.resolver.clientFor(ctx, environment, accessKey, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

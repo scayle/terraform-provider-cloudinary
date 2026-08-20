@@ -14,10 +14,8 @@ Reads a Cloudinary upload preset from a product environment.
 
 ```terraform
 data "cloudinary_upload_preset" "uploads" {
-  cloud_name = "acme-prod"
-  api_key    = "814814814814814"
-  api_secret = "..."
-  name       = "acme-videos"
+  product_environment = "acme-prod"
+  name                = "acme-videos"
 }
 
 output "asset_folder" {
@@ -31,12 +29,11 @@ output "asset_folder" {
 ### Required
 
 - `name` (String) The name of the upload preset to look up.
+- `product_environment` (String) The ID or cloud name of the product environment to read from.
 
 ### Optional
 
-- `api_key` (String) The API key of that product environment. Defaults to the provider's `api_key`.
-- `api_secret` (String, Sensitive) The API secret of that product environment. Defaults to the provider's `api_secret`.
-- `cloud_name` (String) The cloud name of the product environment to read from. Defaults to the provider's `cloud_name`.
+- `access_key` (String) The name of the access key to authenticate with. Defaults to the oldest enabled key.
 
 ### Read-Only
 

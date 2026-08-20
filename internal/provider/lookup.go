@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning"
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning/models/components"
@@ -86,4 +87,53 @@ func lookupTrigger(ctx context.Context, client *admin.API, triggerID, uri string
 		}
 	}
 	return nil, nil
+}
+
+func resolveProductEnvironment(ctx context.Context, client *cldprovisioning.CldProvisioning, ref string) (*components.ProductEnvironment, error) {
+	if env, err := client.ProductEnvironments.Get(ctx, ref); err == nil {
+		return env, nil
+	}
+
+	env, err := getProductEnvironmentByCloudName(ctx, client, ref)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		return nil, fmt.Errorf("no sub-account found with id or cloud_name %q", ref)
+	}
+	return env, nil
+}
+
+// pickAccessKey chooses the key the Admin API calls authenticate with. A named
+// key wins; otherwise the oldest enabled one is used, which is deterministic and
+// in practice the sub-account's root key. The API reports a "root" flag but the
+// SDK model does not expose it.
+func pickAccessKey(keys []components.AccessKey, name string) *components.AccessKey {
+	var chosen *components.AccessKey
+	for i := range keys {
+		k := &keys[i]
+		if name != "" {
+			if deref(k.Name) == name {
+				return k
+			}
+			continue
+		}
+		if k.Enabled != nil && !*k.Enabled {
+			continue
+		}
+		if chosen == nil || olderThan(k.CreatedAt, chosen.CreatedAt) {
+			chosen = k
+		}
+	}
+	return chosen
+}
+
+func olderThan(a, b *time.Time) bool {
+	if a == nil {
+		return false
+	}
+	if b == nil {
+		return true
+	}
+	return a.Before(*b)
 }

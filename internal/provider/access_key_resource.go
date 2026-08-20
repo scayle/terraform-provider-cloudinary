@@ -80,7 +80,7 @@ func (r *accessKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"api_secret": schema.StringAttribute{
 				Computed:            true,
 				Sensitive:           true,
-				MarkdownDescription: "The generated API secret. Only returned at creation time; unavailable after import.",
+				MarkdownDescription: "The generated API secret.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{
@@ -142,7 +142,6 @@ func (r *accessKeyResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	// The list endpoint does not return the secret; keep the one already in state.
 	mapAccessKeyToModel(key, &state, state.APISecret.ValueString())
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

@@ -75,11 +75,11 @@ func setEnv(vars map[string]string) func() {
 	}
 }
 
-// providerClients carries the Provisioning API client plus the provider-level
-// Admin API credential defaults, which Admin API resources may override.
+// providerClients carries the Provisioning API client plus the resolver that
+// derives per-product-environment Admin API credentials from it.
 type providerClients struct {
 	Provisioning *cldprovisioning.CldProvisioning
-	Admin        adminConfig
+	Admin        *adminResolver
 }
 
 func configureClients(providerData any, diags *diag.Diagnostics) *providerClients {

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -15,9 +16,6 @@ provider "cloudinary" {
   provisioning_api_secret = "s"
   api_base_url            = %[1]q
   admin_api_base_url      = %[2]q
-  cloud_name              = "acme-prod"
-  api_key                 = "key"
-  api_secret              = "secret"
 }
 `, provisioningURL, adminURL)
 }
@@ -38,10 +36,13 @@ func TestAccUploadPresetResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{ // Create the generic upload preset, mirroring the deployed acme-prod setup
 				Config: config + `
-resource "cloudinary_upload_preset" "uploads" {
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
   cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+}
+
+resource "cloudinary_upload_preset" "uploads" {
+  product_environment = cloudinary_product_environment.test.cloud_name
 
   name                                 = "acme-videos"
   unsigned                             = false
@@ -71,10 +72,13 @@ resource "cloudinary_upload_preset" "uploads" {
 			},
 			{ // Update
 				Config: config + `
-resource "cloudinary_upload_preset" "uploads" {
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
   cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+}
+
+resource "cloudinary_upload_preset" "uploads" {
+  product_environment = cloudinary_product_environment.test.cloud_name
 
   name            = "acme-videos"
   type            = "upload"
@@ -111,10 +115,13 @@ func TestAccUploadPresetEval(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: config + `
-resource "cloudinary_upload_preset" "with_eval" {
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
   cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+}
+
+resource "cloudinary_upload_preset" "with_eval" {
+  product_environment = cloudinary_product_environment.test.cloud_name
 
   name                                 = "credential carrier"
   unsigned                             = false
@@ -140,7 +147,7 @@ resource "cloudinary_upload_preset" "with_eval" {
 				ImportState:             true,
 				ImportStateId:           "acme-prod/credential carrier",
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"api_key", "api_secret"},
+				ImportStateVerifyIgnore: []string{"access_key"},
 			},
 		},
 	})
@@ -162,10 +169,13 @@ func TestAccTriggerResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{ // Create
 				Config: config + `
-resource "cloudinary_trigger" "video_uploaded" {
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
   cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+}
+
+resource "cloudinary_trigger" "video_uploaded" {
+  product_environment = cloudinary_product_environment.test.cloud_name
 
   uri        = "https://example.com/webhooks/uploaded"
   event_type = "upload"
@@ -181,10 +191,13 @@ resource "cloudinary_trigger" "video_uploaded" {
 			},
 			{ // Update
 				Config: config + `
-resource "cloudinary_trigger" "video_uploaded" {
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
   cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+}
+
+resource "cloudinary_trigger" "video_uploaded" {
+  product_environment = cloudinary_product_environment.test.cloud_name
 
   uri        = "https://example.com/webhooks/uploaded-v2"
   event_type = "upload"
@@ -215,18 +228,19 @@ func TestAccUploadPresetDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: adminProviderConfig(provisioningServer.URL, adminServer.URL) + `
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
+  cloud_name = "acme-prod"
+}
+
 resource "cloudinary_upload_preset" "uploads" {
-  cloud_name   = "acme-prod"
-  api_key      = "key"
-  api_secret   = "secret"
+  product_environment = cloudinary_product_environment.test.cloud_name
   name         = "acme-videos"
   asset_folder = "acme-videos"
 }
 
 data "cloudinary_upload_preset" "uploads" {
-  cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+  product_environment = cloudinary_product_environment.test.cloud_name
   name       = cloudinary_upload_preset.uploads.name
 }
 `,
@@ -253,18 +267,19 @@ func TestAccTriggerDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: adminProviderConfig(provisioningServer.URL, adminServer.URL) + `
-resource "cloudinary_trigger" "video_uploaded" {
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
   cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+}
+
+resource "cloudinary_trigger" "video_uploaded" {
+  product_environment = cloudinary_product_environment.test.cloud_name
   uri        = "https://example.com/webhooks/uploaded"
   event_type = "upload"
 }
 
 data "cloudinary_trigger" "video_uploaded" {
-  cloud_name = "acme-prod"
-  api_key    = "key"
-  api_secret = "secret"
+  product_environment = cloudinary_product_environment.test.cloud_name
   trigger_id = cloudinary_trigger.video_uploaded.trigger_id
 }
 `,
@@ -273,6 +288,79 @@ data "cloudinary_trigger" "video_uploaded" {
 					resource.TestCheckResourceAttr("data.cloudinary_trigger.video_uploaded", "uri",
 						"https://example.com/webhooks/uploaded"),
 				),
+			},
+		},
+	})
+}
+
+// Pinning access_key keeps resolution off the default key.
+func TestAccUploadPresetPinnedAccessKey(t *testing.T) {
+	provisioning := newMockProvisioning()
+	provisioningServer := provisioning.server()
+	t.Cleanup(provisioningServer.Close)
+
+	admin := newMockAdmin()
+	adminServer := admin.server()
+	t.Cleanup(adminServer.Close)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: adminProviderConfig(provisioningServer.URL, adminServer.URL) + `
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
+  cloud_name = "acme-prod"
+}
+
+resource "cloudinary_access_key" "terraform" {
+  sub_account_id = cloudinary_product_environment.test.id
+  name           = "terraform"
+}
+
+resource "cloudinary_upload_preset" "uploads" {
+  product_environment = cloudinary_product_environment.test.id
+  access_key          = cloudinary_access_key.terraform.name
+  name                = "acme-videos"
+  asset_folder        = "acme-videos"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("cloudinary_upload_preset.uploads", "access_key", "terraform"),
+					resource.TestCheckResourceAttr("cloudinary_upload_preset.uploads", "asset_folder", "acme-videos"),
+				),
+			},
+		},
+	})
+}
+
+// An unknown access key name must fail rather than silently fall back.
+func TestAccUploadPresetUnknownAccessKey(t *testing.T) {
+	provisioning := newMockProvisioning()
+	provisioningServer := provisioning.server()
+	t.Cleanup(provisioningServer.Close)
+
+	admin := newMockAdmin()
+	adminServer := admin.server()
+	t.Cleanup(adminServer.Close)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: adminProviderConfig(provisioningServer.URL, adminServer.URL) + `
+resource "cloudinary_product_environment" "test" {
+  name       = "acme"
+  cloud_name = "acme-prod"
+}
+
+resource "cloudinary_upload_preset" "uploads" {
+  product_environment = cloudinary_product_environment.test.id
+  access_key          = "nonexistent"
+  name                = "acme-videos"
+}
+`,
+				ExpectError: regexp.MustCompile(`no access key named "nonexistent"`),
 			},
 		},
 	})

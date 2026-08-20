@@ -16,9 +16,7 @@ Manages a Cloudinary trigger within a product environment through the [Admin API
 # Notifies an endpoint whenever an asset finishes uploading to this product
 # environment.
 resource "cloudinary_trigger" "uploaded" {
-  cloud_name = cloudinary_product_environment.example.cloud_name
-  api_key    = cloudinary_access_key.example.api_key
-  api_secret = cloudinary_access_key.example.api_secret
+  product_environment = cloudinary_product_environment.example.id
 
   uri        = "https://example.com/webhooks/uploaded"
   event_type = "upload"
@@ -31,15 +29,14 @@ resource "cloudinary_trigger" "uploaded" {
 ### Required
 
 - `event_type` (String) The event that fires the trigger, for example `upload`.
+- `product_environment` (String) The ID or cloud name of the product environment to act on. The provider resolves the Admin API credentials for it through the Provisioning API. Changing it forces a new resource.
 - `uri` (String) The endpoint notifications are delivered to.
 
 ### Optional
 
+- `access_key` (String) The name of the access key to authenticate with. Defaults to the oldest enabled key of the product environment. Pin it to keep key rotation from touching every resource.
 - `additive` (Boolean) Whether the trigger is delivered in addition to any globally configured notification URL. Defaults to `false`.
-- `api_key` (String) The API key of that product environment. Defaults to the provider's `api_key`.
-- `api_secret` (String, Sensitive) The API secret of that product environment. Defaults to the provider's `api_secret`.
 - `auth_scheme` (String, Sensitive) Authentication scheme presented to the endpoint. Treated as sensitive because it may carry credentials.
-- `cloud_name` (String) The cloud name of the product environment to act on. Defaults to the provider's `cloud_name`. Changing it forces a new resource.
 - `filter` (String) JSON-encoded filter restricting which events fire the trigger.
 - `filter_language` (String) The language the `filter` expression is written in.
 - `payload_template` (String) JSON-encoded template shaping the notification payload.
@@ -59,5 +56,6 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
+# "<product_environment>/<trigger_id>"
 terraform import cloudinary_trigger.uploaded acme-prod/1a2b3c4d5e6f
 ```

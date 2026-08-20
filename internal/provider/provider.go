@@ -66,9 +66,9 @@ func (p *cloudinaryProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 		MarkdownDescription: "The Cloudinary provider manages Cloudinary product environments (sub-accounts) and " +
 			"their API access keys through the [Cloudinary Provisioning API](https://cloudinary.com/documentation/provisioning_api), " +
 			"and upload presets and triggers through the [Admin API](https://cloudinary.com/documentation/admin_api). " +
-			"The Provisioning API uses the account-level *provisioning* (account management) key and secret; the Admin API " +
-			"authenticates per product environment, so `cloudinary_upload_preset` and `cloudinary_trigger` take their own " +
-			"`cloud_name`, `api_key` and `api_secret`, falling back to the ones configured here.",
+			"Credentials are the account-level *provisioning* (account management) key and secret. The Admin API " +
+			"authenticates per product environment, but `cloudinary_upload_preset` and `cloudinary_trigger` only " +
+			"reference a `product_environment`; the provider resolves that environment's credentials itself.",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				Optional: true,
@@ -99,8 +99,9 @@ func (p *cloudinaryProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 			},
 			"cloud_name": schema.StringAttribute{
 				Optional: true,
-				MarkdownDescription: "Default cloud name for Admin API resources. May also be set with the `" +
-					envCloudName + "` environment variable.",
+				MarkdownDescription: "Cloud name to use for Admin API resources instead of resolving one, for users " +
+					"who hold product environment credentials but no provisioning credentials. May also be set with " +
+					"the `" + envCloudName + "` environment variable.",
 			},
 			"api_key": schema.StringAttribute{
 				Optional:  true,
@@ -162,20 +163,22 @@ func (p *cloudinaryProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
+	provisioning := newClient(clientConfig{
+		AccountID: accountID,
+		APIKey:    apiKey,
+		APISecret: apiSecret,
+		Region:    region,
+		BaseURL:   baseURL,
+	})
+
 	clients := &providerClients{
-		Provisioning: newClient(clientConfig{
-			AccountID: accountID,
-			APIKey:    apiKey,
-			APISecret: apiSecret,
-			Region:    region,
-			BaseURL:   baseURL,
-		}),
-		Admin: adminConfig{
+		Provisioning: provisioning,
+		Admin: newAdminResolver(provisioning, adminConfig{
 			CloudName: firstNonEmpty(config.CloudName, os.Getenv(envCloudName)),
 			APIKey:    firstNonEmpty(config.APIKey, os.Getenv(envAdminAPIKey)),
 			APISecret: firstNonEmpty(config.APISecret, os.Getenv(envAdminAPISecret)),
 			BaseURL:   firstNonEmpty(config.AdminAPIBaseURL, os.Getenv(envAdminBaseURL)),
-		},
+		}),
 	}
 
 	// Make the clients available to resources and data sources.
