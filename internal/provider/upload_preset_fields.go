@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sort"
 	"strings"
 
 	dsschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -321,4 +323,32 @@ func toStringMap(raw any) (map[string]string, bool) {
 	default:
 		return nil, false
 	}
+}
+
+// warnUnstoredSettings reports parameters that were configured but that
+// Cloudinary did not store. It silently discards parameters whose add-on is not
+// enabled for the product environment, which would otherwise show up only as a
+// diff that never converges.
+func warnUnstoredSettings(configured, stored map[string]any, diags *diag.Diagnostics) {
+	var missing []string
+	for _, f := range uploadPresetFields {
+		if _, ok := configured[f.name]; !ok {
+			continue
+		}
+		if _, ok := stored[f.name]; !ok {
+			missing = append(missing, f.name)
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+
+	sort.Strings(missing)
+	diags.AddWarning(
+		"Cloudinary did not store some configured parameters",
+		fmt.Sprintf("The upload preset was written, but Cloudinary discarded: %s. This usually means the add-on "+
+			"a parameter depends on is not enabled for this product environment. The next plan will show a diff "+
+			"for these parameters until they are removed from the configuration or the add-on is enabled.",
+			strings.Join(missing, ", ")),
+	)
 }

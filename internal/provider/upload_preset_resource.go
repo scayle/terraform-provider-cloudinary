@@ -122,6 +122,8 @@ func (r *uploadPresetResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	r.warnUnstored(ctx, client, name.ValueString(), settings, &resp.Diagnostics)
+
 	resp.State.Raw = req.Plan.Raw
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), uploadPresetID(creds.CloudName, name.ValueString()))...)
 }
@@ -197,6 +199,8 @@ func (r *uploadPresetResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	r.warnUnstored(ctx, client, name.ValueString(), settings, &resp.Diagnostics)
+
 	resp.State.Raw = req.Plan.Raw
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), uploadPresetID(creds.CloudName, name.ValueString()))...)
 }
@@ -245,6 +249,19 @@ func (r *uploadPresetResource) clientFor(ctx context.Context, src attributeGette
 		return nil, adminConfig{}
 	}
 	return r.resolver.clientFor(ctx, environment, accessKey, diags)
+}
+
+// warnUnstored re-reads the preset so a parameter Cloudinary silently ignored
+// is reported at apply time rather than only as a recurring diff.
+func (r *uploadPresetResource) warnUnstored(ctx context.Context, client *admin.API, name string, configured map[string]any, diags *diag.Diagnostics) {
+	res, err := client.GetUploadPreset(ctx, admin.GetUploadPresetParams{Name: name})
+	if err == nil && res != nil {
+		err = adminError(res.Error)
+	}
+	if err != nil {
+		return
+	}
+	warnUnstoredSettings(configured, settingsAsMap(res.Settings), diags)
 }
 
 func uploadPresetID(cloudName, name string) string {

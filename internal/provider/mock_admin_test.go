@@ -90,7 +90,32 @@ func splitPresetBody(r *http.Request) (name string, unsigned bool, settings map[
 			settings[key] = value
 		}
 	}
-	return name, unsigned, settings
+	return name, unsigned, normalizeSettings(settings)
+}
+
+// The SDK sends list and map parameters joined into a single string, but the
+// Admin API stores and returns them structured. The mock mirrors that.
+func normalizeSettings(settings map[string]any) map[string]any {
+	for _, key := range []string{"tags", "allowed_formats"} {
+		if joined, ok := settings[key].(string); ok {
+			settings[key] = strings.Split(joined, ",")
+		}
+	}
+	for _, key := range []string{"context", "metadata"} {
+		joined, ok := settings[key].(string)
+		if !ok {
+			continue
+		}
+		out := map[string]any{}
+		for _, pair := range strings.Split(joined, "|") {
+			k, v, found := strings.Cut(pair, "=")
+			if found {
+				out[k] = v
+			}
+		}
+		settings[key] = out
+	}
+	return settings
 }
 
 func (m *mockAdmin) createPreset(w http.ResponseWriter, r *http.Request) {

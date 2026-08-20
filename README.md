@@ -130,6 +130,16 @@ Resolved credentials are cached in memory for the lifetime of the process, never
 provider-level `cloud_name` / `api_key` / `api_secret` remain available as an escape hatch for users
 who hold product environment credentials but no provisioning credentials.
 
+### Parameters Cloudinary may ignore
+
+Some upload parameters depend on an add-on being enabled for the product environment — `auto_tagging`,
+`categorization`, `background_removal`, `detection`, `ocr` and `moderation` among them. When the add-on
+is not enabled Cloudinary accepts the request but silently discards the parameter.
+
+The provider re-reads the preset after writing it and raises a warning naming any parameter that was
+not stored. Because the desired state genuinely was not reached, the parameter keeps showing as a diff
+until the add-on is enabled or the parameter is removed from the configuration.
+
 ## Importing
 
 ```sh
