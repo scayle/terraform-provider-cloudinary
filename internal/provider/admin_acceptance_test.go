@@ -293,7 +293,7 @@ data "cloudinary_trigger" "video_uploaded" {
 	})
 }
 
-// Pinning access_key keeps resolution off the default key.
+// Overriding access_key keeps resolution off the default root key.
 func TestAccUploadPresetPinnedAccessKey(t *testing.T) {
 	provisioning := newMockProvisioning()
 	provisioningServer := provisioning.server()

@@ -104,20 +104,33 @@ func resolveProductEnvironment(ctx context.Context, client *cldprovisioning.CldP
 	return env, nil
 }
 
-// pickAccessKey chooses the key the Admin API calls authenticate with. A named
-// key wins; otherwise the oldest enabled one is used, which is deterministic and
-// in practice the sub-account's root key. The API reports a "root" flag but the
-// SDK model does not expose it.
+// rootAccessKeyName is what Cloudinary calls the access key it provisions
+// alongside a product environment.
+const rootAccessKeyName = "Root"
+
+// pickAccessKey chooses the key the Admin API calls authenticate with: the one
+// named in the configuration, else the root key, else the oldest enabled key.
+//
+// The Provisioning API marks the root key with a "root" flag, but the generated
+// SDK model omits it, so the key is identified by name. The oldest-enabled
+// fallback covers an environment whose root key was renamed or removed.
 func pickAccessKey(keys []components.AccessKey, name string) *components.AccessKey {
+	if name == "" {
+		name = rootAccessKeyName
+	}
+
+	for i := range keys {
+		if deref(keys[i].Name) == name {
+			return &keys[i]
+		}
+	}
+	if name != rootAccessKeyName {
+		return nil
+	}
+
 	var chosen *components.AccessKey
 	for i := range keys {
 		k := &keys[i]
-		if name != "" {
-			if deref(k.Name) == name {
-				return k
-			}
-			continue
-		}
 		if k.Enabled != nil && !*k.Enabled {
 			continue
 		}

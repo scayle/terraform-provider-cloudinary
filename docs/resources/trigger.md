@@ -34,7 +34,7 @@ resource "cloudinary_trigger" "uploaded" {
 
 ### Optional
 
-- `access_key` (String) The name of the access key to authenticate with. Defaults to the oldest enabled key of the product environment. Pin it to keep key rotation from touching every resource.
+- `access_key` (String) The name of the access key to authenticate with. Defaults to the product environment's root key, which Cloudinary provisions with it. This is a key *name*, never a secret.
 - `additive` (Boolean) Whether the trigger is delivered in addition to any globally configured notification URL. Defaults to `false`.
 - `auth_scheme` (String, Sensitive) Authentication scheme presented to the endpoint. Treated as sensitive because it may carry credentials.
 - `filter` (String) JSON-encoded filter restricting which events fire the trigger.

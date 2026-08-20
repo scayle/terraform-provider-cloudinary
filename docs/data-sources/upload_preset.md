@@ -33,7 +33,7 @@ output "asset_folder" {
 
 ### Optional
 
-- `access_key` (String) The name of the access key to authenticate with. Defaults to the oldest enabled key.
+- `access_key` (String) The name of the access key to authenticate with. Defaults to the root key.
 
 ### Read-Only
 

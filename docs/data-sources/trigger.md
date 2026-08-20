@@ -33,7 +33,7 @@ output "event_type" {
 
 ### Optional
 
-- `access_key` (String) The name of the access key to authenticate with. Defaults to the oldest enabled key.
+- `access_key` (String) The name of the access key to authenticate with. Defaults to the root key.
 - `trigger_id` (String) The ID of the trigger to look up. Either this or `uri` must be set.
 - `uri` (String) The endpoint notifications are delivered to. May be used to look the trigger up instead of `trigger_id`.
 

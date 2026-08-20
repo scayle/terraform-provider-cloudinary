@@ -12,6 +12,7 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/cloudinary/cloudinary-go/v2/api/admin"
 	"github.com/cloudinary/cloudinary-go/v2/config"
+	"github.com/cloudinary/cloudinary-go/v2/logger"
 	dsschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -43,7 +44,15 @@ func newAdminAPI(cfg adminConfig) (*admin.API, error) {
 	if cfg.BaseURL != "" {
 		conf.API.UploadPrefix = cfg.BaseURL
 	}
-	return admin.NewWithConfiguration(conf)
+
+	client, err := admin.NewWithConfiguration(conf)
+	if err != nil {
+		return nil, err
+	}
+	// The SDK's debug logger prints entire response bodies, which include
+	// settings such as eval. Keep it off regardless of the SDK's default.
+	client.Logger.SetLevel(logger.NONE)
+	return client, nil
 }
 
 // adminResolver derives per-product-environment credentials from the
@@ -163,8 +172,8 @@ func adminReferenceAttributes() map[string]schema.Attribute {
 		},
 		"access_key": schema.StringAttribute{
 			Optional: true,
-			MarkdownDescription: "The name of the access key to authenticate with. Defaults to the oldest enabled " +
-				"key of the product environment. Pin it to keep key rotation from touching every resource.",
+			MarkdownDescription: "The name of the access key to authenticate with. Defaults to the product " +
+				"environment's root key, which Cloudinary provisions with it. This is a key *name*, never a secret.",
 		},
 	}
 }
@@ -177,7 +186,7 @@ func adminReferenceDataSourceAttributes() map[string]dsschema.Attribute {
 		},
 		"access_key": dsschema.StringAttribute{
 			Optional:            true,
-			MarkdownDescription: "The name of the access key to authenticate with. Defaults to the oldest enabled key.",
+			MarkdownDescription: "The name of the access key to authenticate with. Defaults to the root key.",
 		},
 	}
 }

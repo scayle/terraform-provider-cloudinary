@@ -110,25 +110,24 @@ resource "cloudinary_upload_preset" "uploads" {
 Resource arguments may be unknown at plan time — only *provider* configuration must resolve then —
 so this creates the environment, resolves its credentials and creates the preset in a single apply.
 
-By default the oldest enabled access key of the environment is used. Set `access_key` to a key name
-to pin it, which keeps key rotation from touching every preset:
+By default the environment's **root key** is used — Cloudinary provisions one with every product
+environment, so nothing extra has to be declared. Set `access_key` to a key name to override it:
 
 ```hcl
-resource "cloudinary_access_key" "terraform" {
-  sub_account_id = cloudinary_product_environment.example.id
-  name           = "terraform"
-}
-
 resource "cloudinary_upload_preset" "uploads" {
   product_environment = cloudinary_product_environment.example.id
-  access_key          = cloudinary_access_key.terraform.name # a name, not a secret
+  access_key          = "another-key" # a key name, never a secret
   name                = "acme-videos"
 }
 ```
 
-Resolved credentials are cached in memory for the lifetime of the process, never in state. The
-provider-level `cloud_name` / `api_key` / `api_secret` remain available as an escape hatch for users
-who hold product environment credentials but no provisioning credentials.
+`access_key` is a key *name*, so nothing sensitive enters state through it. Resolved credentials are
+cached in memory for the lifetime of the process and are never written to state or private state. The
+Cloudinary SDK's debug logger, which prints whole response bodies, is disabled explicitly so a
+preset's `eval` cannot reach Terraform's logs.
+
+The provider-level `cloud_name` / `api_key` / `api_secret` remain available as an escape hatch for
+users who hold product environment credentials but no provisioning credentials.
 
 ### Parameters Cloudinary may ignore
 

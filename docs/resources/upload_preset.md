@@ -68,7 +68,7 @@ resource "cloudinary_upload_preset" "with_eval" {
 
 ### Optional
 
-- `access_key` (String) The name of the access key to authenticate with. Defaults to the oldest enabled key of the product environment. Pin it to keep key rotation from touching every resource.
+- `access_key` (String) The name of the access key to authenticate with. Defaults to the product environment's root key, which Cloudinary provisions with it. This is a key *name*, never a secret.
 - `accessibility_analysis` (Boolean) Return an accessibility analysis.
 - `allowed_formats` (List of String) Formats accepted for upload. Any supported type is allowed when unset.
 - `asset_folder` (String) Full path of the folder the asset is placed in. Dynamic folder mode only.
