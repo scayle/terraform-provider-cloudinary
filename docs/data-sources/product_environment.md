@@ -38,7 +38,7 @@ output "cloud_name" {
 
 ### Read-Only
 
-- `api_access_keys` (Attributes List) The API access keys of the sub-account. The `secret` is not returned by the read API and is therefore empty here. (see [below for nested schema](#nestedatt--api_access_keys))
+- `api_access_keys` (Attributes List) The API access keys of the sub-account. Secrets are deliberately omitted: the read API does return them, and surfacing them here would write every key's secret of any environment this data source reads into the state file. Use the `cloudinary_access_key` data source to fetch a specific key. (see [below for nested schema](#nestedatt--api_access_keys))
 - `created_at` (String) The RFC 3339 timestamp when the product environment was created.
 - `enabled` (Boolean) Whether the product environment is enabled.
 - `name` (String) The display name of the product environment.
@@ -50,4 +50,3 @@ Read-Only:
 
 - `enabled` (Boolean) Whether the access key is enabled.
 - `key` (String) The API key.
-- `secret` (String, Sensitive) The API secret. Not returned by the read API.

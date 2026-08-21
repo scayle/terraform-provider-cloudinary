@@ -30,6 +30,12 @@ type productEnvironmentDataSourceModel struct {
 	APIAccessKeys types.List   `tfsdk:"api_access_keys"`
 }
 
+// listedAccessKeyAttrTypes describes an access-key object without its secret.
+var listedAccessKeyAttrTypes = map[string]attr.Type{
+	"key":     types.StringType,
+	"enabled": types.BoolType,
+}
+
 func NewProductEnvironmentDataSource() datasource.DataSource {
 	return &productEnvironmentDataSource{}
 }
@@ -67,18 +73,15 @@ func (d *productEnvironmentDataSource) Schema(_ context.Context, _ datasource.Sc
 			},
 			"api_access_keys": schema.ListNestedAttribute{
 				Computed: true,
-				MarkdownDescription: "The API access keys of the sub-account. The `secret` is not returned by the read " +
-					"API and is therefore empty here.",
+				MarkdownDescription: "The API access keys of the sub-account. Secrets are deliberately omitted: the " +
+					"read API does return them, and surfacing them here would write every key's secret of any " +
+					"environment this data source reads into the state file. Use the `cloudinary_access_key` data " +
+					"source to fetch a specific key.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"key": schema.StringAttribute{
 							Computed:            true,
 							MarkdownDescription: "The API key.",
-						},
-						"secret": schema.StringAttribute{
-							Computed:            true,
-							Sensitive:           true,
-							MarkdownDescription: "The API secret. Not returned by the read API.",
 						},
 						"enabled": schema.BoolAttribute{
 							Computed:            true,
@@ -144,15 +147,14 @@ func (d *productEnvironmentDataSource) Read(ctx context.Context, req datasource.
 
 	keys := make([]attr.Value, 0, len(env.APIAccessKeys))
 	for _, k := range env.APIAccessKeys {
-		obj, diags := types.ObjectValue(apiAccessKeyAttrTypes, map[string]attr.Value{
+		obj, diags := types.ObjectValue(listedAccessKeyAttrTypes, map[string]attr.Value{
 			"key":     types.StringValue(deref(k.Key)),
-			"secret":  nullableString(deref(k.Secret)),
 			"enabled": types.BoolPointerValue(k.Enabled),
 		})
 		resp.Diagnostics.Append(diags...)
 		keys = append(keys, obj)
 	}
-	list, diags := types.ListValue(types.ObjectType{AttrTypes: apiAccessKeyAttrTypes}, keys)
+	list, diags := types.ListValue(types.ObjectType{AttrTypes: listedAccessKeyAttrTypes}, keys)
 	resp.Diagnostics.Append(diags...)
 	config.APIAccessKeys = list
 
