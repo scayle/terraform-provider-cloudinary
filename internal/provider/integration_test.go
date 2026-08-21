@@ -100,8 +100,8 @@ func TestIntegrationSDKAgainstMock(t *testing.T) {
 	if found == nil {
 		t.Fatalf("generated key %q not found in list", apiKey)
 	}
-	if deref(found.APISecret) != "" {
-		t.Errorf("list should not return the secret")
+	if deref(found.APISecret) == "" {
+		t.Errorf("list should return the secret")
 	}
 
 	// --- Access key delete then sub-account delete ---

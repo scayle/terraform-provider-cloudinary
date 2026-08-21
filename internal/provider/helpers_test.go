@@ -1,7 +1,9 @@
 package provider
 
 import (
+	"maps"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -104,5 +106,55 @@ func TestMapAccessKeyToModelPreservesSecret(t *testing.T) {
 	}
 	if model.ID.ValueString() != "sub1/123" {
 		t.Errorf("composite id = %q, want sub1/123", model.ID.ValueString())
+	}
+}
+
+// The live Admin API returns list and map settings structured; the joined forms
+// are what the SDK sends, and are accepted defensively.
+func TestToStringSlice(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		in     any
+		want   []string
+		wantOK bool
+	}{
+		{[]any{"mp4", "mov"}, []string{"mp4", "mov"}, true},
+		{[]string{"mp4"}, []string{"mp4"}, true},
+		{"mp4,mov", []string{"mp4", "mov"}, true},
+		{"", []string{}, true},
+		{[]any{"mp4", 3}, nil, false},
+		{42, nil, false},
+	}
+
+	for _, c := range cases {
+		got, ok := toStringSlice(c.in)
+		if ok != c.wantOK || (ok && !slices.Equal(got, c.want)) {
+			t.Errorf("toStringSlice(%#v) = (%#v, %v), want (%#v, %v)", c.in, got, ok, c.want, c.wantOK)
+		}
+	}
+}
+
+func TestToStringMap(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		in     any
+		want   map[string]string
+		wantOK bool
+	}{
+		{map[string]any{"a": "1"}, map[string]string{"a": "1"}, true},
+		{map[string]string{"a": "1"}, map[string]string{"a": "1"}, true},
+		{"a=1|b=2", map[string]string{"a": "1", "b": "2"}, true},
+		{"", map[string]string{}, true},
+		{"nokey", nil, false},
+		{map[string]any{"a": 1}, nil, false},
+	}
+
+	for _, c := range cases {
+		got, ok := toStringMap(c.in)
+		if ok != c.wantOK || (ok && !maps.Equal(got, c.want)) {
+			t.Errorf("toStringMap(%#v) = (%#v, %v), want (%#v, %v)", c.in, got, ok, c.want, c.wantOK)
+		}
 	}
 }

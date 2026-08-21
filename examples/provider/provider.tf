@@ -16,4 +16,15 @@ provider "cloudinary" {
   # provisioning_api_key    = "..."          # or CLOUDINARY_PROVISIONING_API_KEY (sensitive)
   # provisioning_api_secret = "..."          # or CLOUDINARY_PROVISIONING_API_SECRET (sensitive)
   # api_region              = "api-eu"       # api (default) | api-eu | api-ap
+
+  # Escape hatch for the Admin API resources (cloudinary_upload_preset,
+  # cloudinary_trigger). They normally reference a product_environment and the
+  # provider resolves its credentials; set these only if you hold product
+  # environment credentials but no provisioning credentials.
+  #   CLOUDINARY_CLOUD_NAME
+  #   CLOUDINARY_API_KEY
+  #   CLOUDINARY_API_SECRET
+  # cloud_name              = "..."
+  # admin_api_key           = "..."          # sensitive
+  # admin_api_secret        = "..."          # sensitive
 }

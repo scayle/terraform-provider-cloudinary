@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning"
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning/models/components"
 	"github.com/cloudinary/account-provisioning-go/cldprovisioning/models/operations"
+	"github.com/cloudinary/cloudinary-go/v2/api/admin"
 )
 
 // getProductEnvironmentByCloudName returns the product environment whose cloud name
@@ -64,4 +66,86 @@ func resolveAccessKey(ctx context.Context, client *cldprovisioning.CldProvisioni
 		}
 	}
 	return nil, nil
+}
+
+func lookupTrigger(ctx context.Context, client *admin.API, triggerID, uri string) (*admin.Trigger, error) {
+	res, err := client.ListTriggers(ctx, admin.ListTriggersParams{})
+	if err == nil && res != nil {
+		err = adminError(res.Error)
+	}
+	if err != nil {
+		return nil, err
+	}
+	for i := range res.Triggers {
+		t := &res.Triggers[i]
+		if triggerID != "" && t.ID == triggerID {
+			return t, nil
+		}
+		if triggerID == "" && uri != "" && t.URI == uri {
+			return t, nil
+		}
+	}
+	return nil, nil
+}
+
+func resolveProductEnvironment(ctx context.Context, client *cldprovisioning.CldProvisioning, ref string) (*components.ProductEnvironment, error) {
+	if env, err := client.ProductEnvironments.Get(ctx, ref); err == nil {
+		return env, nil
+	}
+
+	env, err := getProductEnvironmentByCloudName(ctx, client, ref)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		return nil, fmt.Errorf("no sub-account found with id or cloud_name %q", ref)
+	}
+	return env, nil
+}
+
+// rootAccessKeyName is what Cloudinary calls the access key it provisions
+// alongside a product environment.
+const rootAccessKeyName = "Root"
+
+// pickAccessKey chooses the key the Admin API calls authenticate with: the one
+// named in the configuration, else the root key, else the oldest enabled key.
+//
+// The Provisioning API marks the root key with a "root" flag, but the generated
+// SDK model omits it, so the key is identified by name. The oldest-enabled
+// fallback covers an environment whose root key was renamed or removed.
+func pickAccessKey(keys []components.AccessKey, name string) *components.AccessKey {
+	if name == "" {
+		name = rootAccessKeyName
+	}
+
+	for i := range keys {
+		if deref(keys[i].Name) == name {
+			return &keys[i]
+		}
+	}
+	if name != rootAccessKeyName {
+		return nil
+	}
+
+	var chosen *components.AccessKey
+	for i := range keys {
+		k := &keys[i]
+		if k.Enabled != nil && !*k.Enabled {
+			continue
+		}
+		if chosen == nil || olderThan(k.CreatedAt, chosen.CreatedAt) {
+			chosen = k
+		}
+	}
+	return chosen
+}
+
+func olderThan(a, b *time.Time) bool {
+	if a == nil {
+		return false
+	}
+	if b == nil {
+		return true
+	}
+	return a.Before(*b)
 }

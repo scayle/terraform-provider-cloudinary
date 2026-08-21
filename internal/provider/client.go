@@ -75,24 +75,39 @@ func setEnv(vars map[string]string) func() {
 	}
 }
 
-// configureClient extracts the *cldprovisioning.CldProvisioning client from the
-// provider-supplied data. providerData is nil during validation passes, which is
-// not an error. A wrong type is a programming error and is reported via diags.
-func configureClient(providerData any, diags *diag.Diagnostics) *cldprovisioning.CldProvisioning {
+// providerClients carries the Provisioning API client plus the resolver that
+// derives per-product-environment Admin API credentials from it.
+type providerClients struct {
+	Provisioning *cldprovisioning.CldProvisioning
+	Admin        *adminResolver
+}
+
+func configureClients(providerData any, diags *diag.Diagnostics) *providerClients {
 	if providerData == nil {
 		return nil
 	}
 
-	client, ok := providerData.(*cldprovisioning.CldProvisioning)
+	clients, ok := providerData.(*providerClients)
 	if !ok {
 		diags.AddError(
 			"Unexpected Provider Data Type",
-			fmt.Sprintf("Expected *cldprovisioning.CldProvisioning, got: %T. Please report this issue to the provider developers.", providerData),
+			fmt.Sprintf("Expected *providerClients, got: %T. Please report this issue to the provider developers.", providerData),
 		)
 		return nil
 	}
 
-	return client
+	return clients
+}
+
+// configureClient extracts the *cldprovisioning.CldProvisioning client from the
+// provider-supplied data. providerData is nil during validation passes, which is
+// not an error. A wrong type is a programming error and is reported via diags.
+func configureClient(providerData any, diags *diag.Diagnostics) *cldprovisioning.CldProvisioning {
+	clients := configureClients(providerData, diags)
+	if clients == nil {
+		return nil
+	}
+	return clients.Provisioning
 }
 
 // isNotFound reports whether err is a Cloudinary API error with a 404 status,

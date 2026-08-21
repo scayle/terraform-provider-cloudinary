@@ -115,6 +115,13 @@ func (m *mockProvisioning) createEnv(w http.ResponseWriter, r *http.Request) {
 		BootSecret: m.nextID("bootsecret"),
 		Keys:       map[string]*mockKey{},
 	}
+	e.Keys[e.BootKey] = &mockKey{
+		Name:      "Root",
+		APIKey:    e.BootKey,
+		APISecret: e.BootSecret,
+		Enabled:   true,
+		CreatedAt: e.CreatedAt,
+	}
 	m.envs[id] = e
 	writeJSON(w, http.StatusOK, m.envJSON(e, true))
 }
@@ -205,7 +212,7 @@ func (m *mockProvisioning) listKeys(w http.ResponseWriter, envID string) {
 	}
 	out := []any{}
 	for _, k := range e.Keys {
-		out = append(out, keyJSON(k, false)) // list omits the secret
+		out = append(out, keyJSON(k, true)) // the list endpoint returns the secret
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"access_keys": out, "total": len(out)})
 }
