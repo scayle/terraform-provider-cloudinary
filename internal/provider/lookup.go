@@ -77,13 +77,12 @@ func lookupTrigger(ctx context.Context, client *admin.API, triggerID, uri string
 		return nil, err
 	}
 	for i := range res.Triggers {
-		if triggerID != "" && res.Triggers[i].ID == triggerID {
-			return &res.Triggers[i], nil
+		t := &res.Triggers[i]
+		if triggerID != "" && t.ID == triggerID {
+			return t, nil
 		}
-	}
-	for i := range res.Triggers {
-		if triggerID == "" && uri != "" && res.Triggers[i].URI == uri {
-			return &res.Triggers[i], nil
+		if triggerID == "" && uri != "" && t.URI == uri {
+			return t, nil
 		}
 	}
 	return nil, nil

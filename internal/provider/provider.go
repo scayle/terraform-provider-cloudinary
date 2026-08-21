@@ -44,8 +44,8 @@ type cloudinaryProviderModel struct {
 	APIRegion             types.String `tfsdk:"api_region"`
 	APIBaseURL            types.String `tfsdk:"api_base_url"`
 	CloudName             types.String `tfsdk:"cloud_name"`
-	APIKey                types.String `tfsdk:"api_key"`
-	APISecret             types.String `tfsdk:"api_secret"`
+	AdminAPIKey           types.String `tfsdk:"admin_api_key"`
+	AdminAPISecret        types.String `tfsdk:"admin_api_secret"`
 	AdminAPIBaseURL       types.String `tfsdk:"admin_api_base_url"`
 }
 
@@ -90,7 +90,8 @@ func (p *cloudinaryProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 			"api_region": schema.StringAttribute{
 				Optional: true,
 				MarkdownDescription: "The regional Provisioning API endpoint to use: `api` (global, default), `api-eu` " +
-					"or `api-ap`. May also be set with the `" + envRegion + "` environment variable.",
+					"or `api-ap`. Applies to the Provisioning API. May also be set with the `" + envRegion +
+					"` environment variable.",
 			},
 			"api_base_url": schema.StringAttribute{
 				Optional: true,
@@ -103,17 +104,17 @@ func (p *cloudinaryProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 					"who hold product environment credentials but no provisioning credentials. May also be set with " +
 					"the `" + envCloudName + "` environment variable.",
 			},
-			"api_key": schema.StringAttribute{
+			"admin_api_key": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
-				MarkdownDescription: "Default product environment API key for Admin API resources. May also be set " +
-					"with the `" + envAdminAPIKey + "` environment variable.",
+				MarkdownDescription: "Product environment API key to use instead of resolving one. May also be set " +
+					"with the `" + envAdminAPIKey + "` environment variable, which is Cloudinary's own name for it.",
 			},
-			"api_secret": schema.StringAttribute{
+			"admin_api_secret": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
-				MarkdownDescription: "Default product environment API secret for Admin API resources. May also be set " +
-					"with the `" + envAdminAPISecret + "` environment variable.",
+				MarkdownDescription: "Product environment API secret to use instead of resolving one. May also be set " +
+					"with the `" + envAdminAPISecret + "` environment variable, which is Cloudinary's own name for it.",
 			},
 			"admin_api_base_url": schema.StringAttribute{
 				Optional: true,
@@ -175,8 +176,8 @@ func (p *cloudinaryProvider) Configure(ctx context.Context, req provider.Configu
 		Provisioning: provisioning,
 		Admin: newAdminResolver(provisioning, adminConfig{
 			CloudName: firstNonEmpty(config.CloudName, os.Getenv(envCloudName)),
-			APIKey:    firstNonEmpty(config.APIKey, os.Getenv(envAdminAPIKey)),
-			APISecret: firstNonEmpty(config.APISecret, os.Getenv(envAdminAPISecret)),
+			APIKey:    firstNonEmpty(config.AdminAPIKey, os.Getenv(envAdminAPIKey)),
+			APISecret: firstNonEmpty(config.AdminAPISecret, os.Getenv(envAdminAPISecret)),
 			BaseURL:   firstNonEmpty(config.AdminAPIBaseURL, os.Getenv(envAdminBaseURL)),
 		}),
 	}

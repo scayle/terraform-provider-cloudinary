@@ -79,9 +79,13 @@ The provider accepts configuration via attributes or environment variables (attr
 | `api_region`              | `CLOUDINARY_API_REGION`              | `api` (default), `api-eu`, or `api-ap`.      |
 | `api_base_url`            | `CLOUDINARY_API_BASE_URL`            | Override the full API base URL (proxy/test). |
 | `cloud_name`              | `CLOUDINARY_CLOUD_NAME`              | Admin API escape hatch: cloud name.          |
-| `api_key`                 | `CLOUDINARY_API_KEY`                 | Admin API escape hatch: key (sensitive).     |
-| `api_secret`              | `CLOUDINARY_API_SECRET`              | Admin API escape hatch: secret (sensitive).  |
+| `admin_api_key`           | `CLOUDINARY_API_KEY`                 | Admin API escape hatch: key (sensitive).     |
+| `admin_api_secret`        | `CLOUDINARY_API_SECRET`              | Admin API escape hatch: secret (sensitive).  |
 | `admin_api_base_url`      | `CLOUDINARY_ADMIN_API_BASE_URL`      | Override the Admin API base URL (proxy/test). |
+
+The `api_region` and `api_base_url` attributes apply to the **Provisioning** API; everything prefixed
+`admin_api_` applies to the **Admin** API. The environment variable names keep Cloudinary's own
+spelling, which is why `admin_api_key` reads `CLOUDINARY_API_KEY`.
 
 Supplying credentials through environment variables keeps them out of your configuration and
 state inputs entirely.
@@ -126,8 +130,8 @@ cached in memory for the lifetime of the process and are never written to state 
 Cloudinary SDK's debug logger, which prints whole response bodies, is disabled explicitly so a
 preset's `eval` cannot reach Terraform's logs.
 
-The provider-level `cloud_name` / `api_key` / `api_secret` remain available as an escape hatch for
-users who hold product environment credentials but no provisioning credentials.
+The provider-level `cloud_name` / `admin_api_key` / `admin_api_secret` remain available as an escape
+hatch for users who hold product environment credentials but no provisioning credentials.
 
 ### Parameters Cloudinary may ignore
 

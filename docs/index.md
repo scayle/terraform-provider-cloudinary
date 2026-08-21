@@ -39,8 +39,8 @@ provider "cloudinary" {
   #   CLOUDINARY_API_KEY
   #   CLOUDINARY_API_SECRET
   # cloud_name              = "..."
-  # api_key                 = "..."          # sensitive
-  # api_secret              = "..."          # sensitive
+  # admin_api_key           = "..."          # sensitive
+  # admin_api_secret        = "..."          # sensitive
 }
 ```
 
@@ -51,10 +51,10 @@ provider "cloudinary" {
 
 - `account_id` (String) The Cloudinary account ID. May also be set with the `CLOUDINARY_ACCOUNT_ID` environment variable.
 - `admin_api_base_url` (String) Override the Admin API base URL (e.g. for a proxy or testing). May also be set with the `CLOUDINARY_ADMIN_API_BASE_URL` environment variable.
+- `admin_api_key` (String, Sensitive) Product environment API key to use instead of resolving one. May also be set with the `CLOUDINARY_API_KEY` environment variable, which is Cloudinary's own name for it.
+- `admin_api_secret` (String, Sensitive) Product environment API secret to use instead of resolving one. May also be set with the `CLOUDINARY_API_SECRET` environment variable, which is Cloudinary's own name for it.
 - `api_base_url` (String) Override the full Provisioning API base URL (e.g. for a proxy or testing). Takes precedence over `api_region`. May also be set with the `CLOUDINARY_API_BASE_URL` environment variable.
-- `api_key` (String, Sensitive) Default product environment API key for Admin API resources. May also be set with the `CLOUDINARY_API_KEY` environment variable.
-- `api_region` (String) The regional Provisioning API endpoint to use: `api` (global, default), `api-eu` or `api-ap`. May also be set with the `CLOUDINARY_API_REGION` environment variable.
-- `api_secret` (String, Sensitive) Default product environment API secret for Admin API resources. May also be set with the `CLOUDINARY_API_SECRET` environment variable.
+- `api_region` (String) The regional Provisioning API endpoint to use: `api` (global, default), `api-eu` or `api-ap`. Applies to the Provisioning API. May also be set with the `CLOUDINARY_API_REGION` environment variable.
 - `cloud_name` (String) Cloud name to use for Admin API resources instead of resolving one, for users who hold product environment credentials but no provisioning credentials. May also be set with the `CLOUDINARY_CLOUD_NAME` environment variable.
 - `provisioning_api_key` (String, Sensitive) The Cloudinary provisioning (account management) API key. May also be set with the `CLOUDINARY_PROVISIONING_API_KEY` environment variable.
 - `provisioning_api_secret` (String, Sensitive) The Cloudinary provisioning (account management) API secret. May also be set with the `CLOUDINARY_PROVISIONING_API_SECRET` environment variable.

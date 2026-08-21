@@ -25,6 +25,6 @@ provider "cloudinary" {
   #   CLOUDINARY_API_KEY
   #   CLOUDINARY_API_SECRET
   # cloud_name              = "..."
-  # api_key                 = "..."          # sensitive
-  # api_secret              = "..."          # sensitive
+  # admin_api_key           = "..."          # sensitive
+  # admin_api_secret        = "..."          # sensitive
 }
