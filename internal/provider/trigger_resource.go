@@ -238,7 +238,17 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	mapTriggerToModel(&res.Trigger, &plan, creds.CloudName)
+	// The update response does not carry the trigger, so mapping it straight
+	// back would blank every computed attribute. Re-read instead, and fall back
+	// to the response only if the trigger cannot be found.
+	trigger := &res.Trigger
+	if refreshed, err := lookupTrigger(ctx, client, state.TriggerID.ValueString(), ""); err == nil && refreshed != nil {
+		trigger = refreshed
+	} else if trigger.ID == "" {
+		trigger.ID = state.TriggerID.ValueString()
+	}
+
+	mapTriggerToModel(trigger, &plan, creds.CloudName)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
