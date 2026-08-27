@@ -212,7 +212,10 @@ func (m *mockAdmin) updateTrigger(w http.ResponseWriter, r *http.Request, id str
 	}
 	existing["id"] = id
 	existing["updated_at"] = "2026-08-19T11:00:00Z"
-	writeJSON(w, http.StatusOK, existing)
+	// The Admin API does not return the trigger on update, so neither does the
+	// mock: mapping the response straight back would blank the computed
+	// attributes and Terraform would reject the apply as inconsistent.
+	writeJSON(w, http.StatusOK, map[string]any{"message": "updated"})
 }
 
 func (m *mockAdmin) deleteTrigger(w http.ResponseWriter, id string) {
